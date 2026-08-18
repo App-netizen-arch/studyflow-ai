@@ -4,7 +4,19 @@ import { noteInputSchema } from '@/lib/validation';
 
 const DEMO_USER = 'demo-user@studyflow.local';
 
+function databaseError() {
+  return NextResponse.json({
+    success: false,
+    data: null,
+    error: {
+      code: 'DATABASE_NOT_CONFIGURED',
+      message: 'The study database is not configured on this deployment. Add DATABASE_URL in Vercel and redeploy.',
+    },
+  }, { status: 503 });
+}
+
 async function getUser() {
+  if (!process.env.DATABASE_URL?.trim()) throw new Error('DATABASE_NOT_CONFIGURED');
   return prisma.user.upsert({ where: { email: DEMO_USER }, update: {}, create: { email: DEMO_USER } });
 }
 
@@ -15,10 +27,14 @@ export async function GET(request: NextRequest) {
     const notes = await prisma.note.findMany({
       where: { userId: user.id, ...(q ? { OR: [{ title: { contains: q } }, { subject: { contains: q } }, { content: { contains: q } }] } : {}) },
       include: { studyResults: { orderBy: { createdAt: 'desc' }, take: 1 } },
-      orderBy: { updatedAt: 'desc' }, take: 100,
+      orderBy: { updatedAt: 'desc' },
+      take: 100,
     });
     return NextResponse.json({ success: true, data: notes, error: null });
-  } catch { return NextResponse.json({ success: false, data: null, error: { code: 'NOTES_READ_FAILED', message: 'Unable to load your notes.' } }, { status: 500 }); }
+  } catch (error) {
+    if (error instanceof Error && error.message === 'DATABASE_NOT_CONFIGURED') return databaseError();
+    return NextResponse.json({ success: false, data: null, error: { code: 'NOTES_READ_FAILED', message: 'Unable to load your notes.' } }, { status: 500 });
+  }
 }
 
 export async function POST(request: NextRequest) {
@@ -28,5 +44,8 @@ export async function POST(request: NextRequest) {
     const user = await getUser();
     const note = await prisma.note.create({ data: { ...parsed.data, subject: parsed.data.subject || null, userId: user.id } });
     return NextResponse.json({ success: true, data: note, error: null }, { status: 201 });
-  } catch { return NextResponse.json({ success: false, data: null, error: { code: 'NOTE_CREATE_FAILED', message: 'Unable to save this note.' } }, { status: 500 }); }
+  } catch (error) {
+    if (error instanceof Error && error.message === 'DATABASE_NOT_CONFIGURED') return databaseError();
+    return NextResponse.json({ success: false, data: null, error: { code: 'NOTE_CREATE_FAILED', message: 'Unable to save this note.' } }, { status: 500 });
+  }
 }
