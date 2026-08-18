@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { ArrowLeft, Copy, Edit3, Trash2, Sparkles, ChevronLeft, ChevronRight, RotateCw } from 'lucide-react';
-import { use, useEffect, useMemo, useState } from 'react';
+import { use, useCallback, useEffect, useMemo, useState } from 'react';
 
 type Result = { id: string; operation: string; result: any; createdAt: string };
 type Note = { id: string; title: string; subject: string | null; content: string; updatedAt: string; studyResults: Result[] };
@@ -17,10 +17,10 @@ export default function StudySession({ params }: { params: Promise<{ id: string 
   const [cardIndex, setCardIndex] = useState(0);
   const [flipped, setFlipped] = useState(false);
 
-  async function load(noteId = id) {
+  const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/notes/${noteId}`, { cache: 'no-store' });
+      const res = await fetch(`/api/notes/${id}`, { cache: 'no-store' });
       const json = await res.json();
       if (!json.success) throw new Error(json.error?.message || 'Unable to load');
       setNote(json.data);
@@ -30,11 +30,11 @@ export default function StudySession({ params }: { params: Promise<{ id: string 
     } finally {
       setLoading(false);
     }
-  }
+  }, [id]);
 
   useEffect(() => {
     void load();
-  }, [id]);
+  }, [load]);
 
   const current = useMemo(() => {
     if (!note) return null;
