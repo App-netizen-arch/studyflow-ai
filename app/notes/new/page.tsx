@@ -1,0 +1,15 @@
+'use client';
+
+import Link from 'next/link';
+import { ArrowLeft, FileText, Sparkles, Save } from 'lucide-react';
+import { useState } from 'react';
+
+export default function NewNotePage(){
+  const [title,setTitle]=useState(''); const [subject,setSubject]=useState(''); const [content,setContent]=useState(''); const [saving,setSaving]=useState(false); const [error,setError]=useState('');
+  const words=content.trim()?content.trim().split(/\s+/).length:0;
+  async function save(){ setError(''); if(!title.trim()||content.trim().length<20){setError('Add a title and at least 20 characters of notes.');return;} setSaving(true); try{ const res=await fetch('/api/notes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title,subject,content})}); const json=await res.json(); if(!json.success) throw new Error(json.error?.message||'Unable to save'); window.location.href=`/notes/${json.data.id}`;}catch(e){setError(e instanceof Error?e.message:'Unable to save this note.');setSaving(false);} }
+  return <main><header style={{borderBottom:'1px solid #e5e7eb',background:'#fff'}}><div className="container" style={{height:72,display:'flex',alignItems:'center',justifyContent:'space-between'}}><Link href="/dashboard" className="btn btn-ghost"><ArrowLeft size={17}/> Dashboard</Link><div style={{fontWeight:900}}>New note</div><button className="btn btn-primary" onClick={save} disabled={saving}><Save size={16}/>{saving?'Saving…':'Save note'}</button></div></header>
+  <div className="container" style={{padding:'34px 0 70px',maxWidth:930}}><div className="badge"><FileText size={13}/> Note editor</div><h1 style={{fontSize:32,letterSpacing:'-.03em',margin:'12px 0 5px'}}>Start with what you know.</h1><p style={{color:'#667085',margin:'0 0 24px'}}>Paste your lecture notes, textbook section, revision material, or class notes.</p>
+    <div className="card" style={{padding:22}}><div style={{display:'grid',gridTemplateColumns:'1fr 240px',gap:12,marginBottom:14}}><input className="input" aria-label="Note title" placeholder="Note title" value={title} onChange={e=>setTitle(e.target.value)}/><input className="input" aria-label="Subject" placeholder="Subject (optional)" value={subject} onChange={e=>setSubject(e.target.value)}/></div><textarea className="textarea" aria-label="Study notes" placeholder="Paste your notes here…" value={content} onChange={e=>setContent(e.target.value)} /><div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginTop:12,color:'#667085',fontSize:12}}><span>{words} words · {content.length.toLocaleString()} characters</span><span><Sparkles size={13} style={{verticalAlign:'-2px',marginRight:4}}/>AI generation is secured on the server</span></div>{error&&<div role="alert" style={{marginTop:14,padding:12,borderRadius:12,background:'#fff4f2',color:'#b42318',fontSize:13}}>{error}</div>}
+    </div><div style={{display:'flex',gap:10,marginTop:16,alignItems:'center'}}><button className="btn btn-primary" onClick={save} disabled={saving||!content.trim()}>Save & study <Sparkles size={16}/></button><Link href="/dashboard" className="btn btn-secondary">Cancel</Link></div></div></main>;
+}
