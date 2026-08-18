@@ -32,6 +32,8 @@ export default function StudySession({ params }: { params: Promise<{ id: string 
     }
   }, [id]);
 
+  // Data fetching is an external synchronization, so this effect intentionally updates loading/data state.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
     void load();
   }, [load]);
