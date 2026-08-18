@@ -6,26 +6,12 @@ export type StudyResult =
   | { flashcards: { question: string; answer: string; difficulty: 'easy' | 'medium' | 'hard'; topic: string }[] }
   | { keyConcepts: string[]; importantFacts: string[]; definitions: { term: string; definition: string }[]; formulas: string[]; examPoints: string[] };
 
+export interface AIProvider { generate(operation: AIOperation, note: string): Promise<StudyResult>; }
+
 const schemas = {
-  summarize: {
-    type: 'object', properties: {
-      summary: { type: 'string' }, keyConcepts: { type: 'array', items: { type: 'string' } },
-      definitions: { type: 'array', items: { type: 'object', properties: { term: { type: 'string' }, definition: { type: 'string' } }, required: ['term','definition'] } },
-      importantFacts: { type: 'array', items: { type: 'string' } },
-    }, required: ['summary','keyConcepts','definitions','importantFacts']
-  },
-  flashcards: {
-    type: 'object', properties: { flashcards: { type: 'array', items: { type: 'object', properties: {
-      question: { type: 'string' }, answer: { type: 'string' }, difficulty: { type: 'string', enum: ['easy','medium','hard'] }, topic: { type: 'string' }
-    }, required: ['question','answer','difficulty','topic'] } } }, required: ['flashcards']
-  },
-  'key-points': {
-    type: 'object', properties: {
-      keyConcepts: { type: 'array', items: { type: 'string' } }, importantFacts: { type: 'array', items: { type: 'string' } },
-      definitions: { type: 'array', items: { type: 'object', properties: { term: { type: 'string' }, definition: { type: 'string' } }, required: ['term','definition'] } },
-      formulas: { type: 'array', items: { type: 'string' } }, examPoints: { type: 'array', items: { type: 'string' } },
-    }, required: ['keyConcepts','importantFacts','definitions','formulas','examPoints']
-  }
+  summarize: { type: 'object', properties: { summary: { type: 'string' }, keyConcepts: { type: 'array', items: { type: 'string' } }, definitions: { type: 'array', items: { type: 'object', properties: { term: { type: 'string' }, definition: { type: 'string' } }, required: ['term','definition'] } }, importantFacts: { type: 'array', items: { type: 'string' } } }, required: ['summary','keyConcepts','definitions','importantFacts'] },
+  flashcards: { type: 'object', properties: { flashcards: { type: 'array', items: { type: 'object', properties: { question: { type: 'string' }, answer: { type: 'string' }, difficulty: { type: 'string', enum: ['easy','medium','hard'] }, topic: { type: 'string' } }, required: ['question','answer','difficulty','topic'] } } }, required: ['flashcards'] },
+  'key-points': { type: 'object', properties: { keyConcepts: { type: 'array', items: { type: 'string' } }, importantFacts: { type: 'array', items: { type: 'string' } }, definitions: { type: 'array', items: { type: 'object', properties: { term: { type: 'string' }, definition: { type: 'string' } }, required: ['term','definition'] } }, formulas: { type: 'array', items: { type: 'string' } }, examPoints: { type: 'array', items: { type: 'string' } } }, required: ['keyConcepts','importantFacts','definitions','formulas','examPoints'] },
 } as const;
 
 const instructions: Record<AIOperation, string> = {
@@ -34,19 +20,22 @@ const instructions: Record<AIOperation, string> = {
   'key-points': 'Extract key concepts, important facts, definitions, formulas when applicable, and likely exam-relevant points. Do not invent information.',
 };
 
-export async function generateStudyMaterial(operation: AIOperation, note: string): Promise<StudyResult> {
-  const key = process.env.GEMINI_API_KEY;
-  if (!key) throw new Error('AI_NOT_CONFIGURED');
-
-  const ai = new GoogleGenAI({ apiKey: key, apiVersion: 'v1' });
-  const prompt = `You are an expert educational assistant.\n\nTask: ${instructions[operation]}\n\nReturn ONLY valid JSON matching the supplied schema.\n\nSOURCE NOTES:\n${note}`;
-  const response = await ai.models.generateContent({
-    model: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
-    contents: prompt,
-    config: { responseMimeType: 'application/json', responseSchema: schemas[operation], temperature: 0.2 },
-  });
-
-  const text = response.text?.trim();
-  if (!text) throw new Error('AI_EMPTY_RESPONSE');
-  try { return JSON.parse(text) as StudyResult; } catch { throw new Error('AI_INVALID_JSON'); }
+class GeminiProvider implements AIProvider {
+  async generate(operation: AIOperation, note: string): Promise<StudyResult> {
+    const key = process.env.GEMINI_API_KEY;
+    if (!key) throw new Error('AI_NOT_CONFIGURED');
+    const ai = new GoogleGenAI({ apiKey: key, apiVersion: 'v1' });
+    const prompt = `You are an expert educational assistant.\n\nTask: ${instructions[operation]}\n\nReturn ONLY valid JSON matching the supplied schema.\n\nSOURCE NOTES:\n${note}`;
+    const response = await ai.models.generateContent({ model: process.env.GEMINI_MODEL || 'gemini-2.5-flash', contents: prompt, config: { responseMimeType: 'application/json', responseSchema: schemas[operation], temperature: 0.2 } });
+    const text = response.text?.trim();
+    if (!text) throw new Error('AI_EMPTY_RESPONSE');
+    try { return JSON.parse(text) as StudyResult; } catch { throw new Error('AI_INVALID_JSON'); }
+  }
 }
+
+export function getAIProvider(): AIProvider {
+  if ((process.env.AI_PROVIDER || 'gemini') === 'gemini') return new GeminiProvider();
+  throw new Error('AI_PROVIDER_UNSUPPORTED');
+}
+
+export async function generateStudyMaterial(operation: AIOperation, note: string): Promise<StudyResult> { return getAIProvider().generate(operation, note); }
