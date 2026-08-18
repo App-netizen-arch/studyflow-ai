@@ -32,7 +32,7 @@ jobs:
           node-version: 24
       - run: npm install --no-audit --no-fund
       - run: npx prisma generate
-      - run: npx prisma db push --accept-data-loss
+      - run: npx prisma migrate deploy
       - run: npm test
       - run: npm run lint
       - run: npm run build
