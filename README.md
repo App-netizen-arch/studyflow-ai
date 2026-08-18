@@ -17,17 +17,24 @@ StudyFlow AI is a focused full-stack study assistant that turns a student's note
 
 ## Stack
 
-Next.js 16, React 19, TypeScript, Tailwind CSS 4, Prisma, SQLite for local development, Zod, and Google's `@google/genai` SDK. The AI layer is isolated in `lib/ai.ts` so another provider can be introduced without changing the UI or data model.
+Next.js 16, React 19, TypeScript, Tailwind CSS 4, Prisma, PostgreSQL, Zod, and Google's `@google/genai` SDK. The AI layer is isolated in `lib/ai.ts` so another provider can be introduced without changing the UI or data model.
 
 ## Local setup
+
+A PostgreSQL database is required for the current production-ready setup. Neon is a convenient hosted option, and Docker/Postgres works locally as well.
 
 ```bash
 git clone https://github.com/App-netizen-arch/studyflow-ai.git
 cd studyflow-ai
 npm install
 cp .env.example .env
+```
+
+Set `DATABASE_URL` to your PostgreSQL connection string and add your Gemini API key, then run:
+
+```bash
 npx prisma generate
-npx prisma db push
+npx prisma migrate deploy
 npm run db:seed
 npm run dev
 ```
@@ -37,7 +44,7 @@ Open `http://localhost:3000`.
 ### Environment variables
 
 ```env
-DATABASE_URL="file:./dev.db"
+DATABASE_URL="postgresql://USER:PASSWORD@HOST:5432/DATABASE?sslmode=require"
 GEMINI_API_KEY="your_google_ai_studio_key"
 GEMINI_MODEL="gemini-2.5-flash"
 ```
@@ -50,14 +57,16 @@ The route `/api/ai/[operation]` validates the operation and note ownership, appl
 
 ## Database architecture
 
-The local v1 uses SQLite through Prisma because it is fast to set up and easy to demo. For Vercel production, point `DATABASE_URL` at a PostgreSQL database and use the corresponding Prisma datasource/migration setup. The application data model is already relational and avoids client-side persistence assumptions.
+The app uses Prisma with PostgreSQL. The initial schema lives in `prisma/migrations/20260818_init/migration.sql`, and the build process runs `prisma migrate deploy` before the Next.js build so a configured production database is brought up to date automatically.
+
+The production database connection is intentionally external to the repository. On Vercel, provision a PostgreSQL database through a marketplace provider such as Neon and bind its connection string to the project's `DATABASE_URL` environment variable.
 
 ## Deployment
 
-1. Create a production PostgreSQL database.
-2. Set `DATABASE_URL` and `GEMINI_API_KEY` in Vercel project environment variables.
-3. Run Prisma migrations against the production database as part of deployment/bootstrap.
-4. Deploy the repository to Vercel.
+1. Provision a PostgreSQL database for the project.
+2. Add `DATABASE_URL` and `GEMINI_API_KEY` to the Vercel **Production** environment.
+3. Redeploy `main`. The build runs Prisma migrations automatically.
+4. Verify `/api/notes` returns HTTP 200 from the deployed site.
 
 Keep secrets out of Git. The repository only contains `.env.example`.
 
@@ -78,15 +87,15 @@ This project demonstrates:
 - Full-stack Next.js App Router architecture
 - Server-side AI integration with structured output
 - API validation and consistent error contracts
-- Prisma relational schema and persistence
+- Prisma relational schema and PostgreSQL persistence
 - UX state design for loading, failure, empty, and success states
 - Responsive/accessibility-conscious UI engineering
 - Basic abuse protection and secret handling
 
 ## Known limitations
 
-Authentication is intentionally kept lightweight in v1 through a demo workspace user so the core product remains easy to run locally. A production deployment should replace this with a real authenticated user/session layer and a PostgreSQL datasource.
+Authentication is intentionally kept lightweight in v1 through a demo workspace user so the core product remains easy to run. A production deployment should replace this with a real authenticated user/session layer.
 
 ## Future improvements
 
-A natural next iteration would add real authentication, provider switching through an explicit adapter interface, richer flashcard study modes, result versioning, and background generation jobs for very large notes.
+A natural next iteration would add real authentication, richer flashcard study modes, result versioning, and background generation jobs for very large notes.
