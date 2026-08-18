@@ -1,0 +1,38 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  createdAt DateTime @default(now())
+  notes     Note[]
+}
+
+model Note {
+  id            String        @id @default(cuid())
+  userId        String
+  title         String
+  subject       String?
+  content       String
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  studyResults  StudyResult[]
+  @@index([userId, updatedAt])
+}
+
+model StudyResult {
+  id        String   @id @default(cuid())
+  noteId   String
+  operation String
+  result   Json
+  createdAt DateTime @default(now())
+  note      Note     @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  @@index([noteId, operation])
+}
