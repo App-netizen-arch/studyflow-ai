@@ -1,27 +1,44 @@
 # StudyFlow AI
 
-StudyFlow AI is a focused full-stack study assistant that turns a student's notes into structured summaries, key points, and interactive flashcards. It is designed as a portfolio-quality demonstration of frontend engineering, backend APIs, persistent data, AI integration, validation, and product UX.
+> **Status: Prototype / In Progress**
 
-## Features
+StudyFlow AI is an early-stage study assistant concept that explores how a web application could turn a student's notes into structured summaries, key points, and interactive flashcards.
 
-- Note editor with title, subject, word/character counts, and persistent storage
-- AI operations: Summary, Key Points, Flashcards
-- Structured JSON generation with Gemini on the server
-- Dashboard with search, recent notes, and meaningful study statistics
-- Interactive flashcards with flip, progress, keyboard-accessible controls, and difficulty/topic labels
-- Full note CRUD: create, view, edit, delete
-- Retry/regenerate and copy result actions
-- Loading, empty, validation, provider, and rate-limit states
+This repository represents the **frontend/product prototype and AI integration groundwork**. The project was not taken through to a fully deployed, production-ready AI product, so some documented capabilities remain planned or partially implemented.
+
+## What is currently here
+
+- Study dashboard and note-management experience
+- Note creation, viewing, editing, and deletion flows
+- UI for AI-assisted summaries, key points, and flashcards
 - Responsive layouts for desktop, tablet, and mobile
-- Accessible labels, focus states, semantic controls, and reduced-motion support
+- Accessible controls, focus states, validation, loading, empty, and error states
+- Next.js/React application structure
+- PostgreSQL/Prisma data-model groundwork
+- Server-side Gemini integration groundwork using Google's `@google/genai` SDK
+
+## Project Status
+
+The repository should be understood as a **portfolio prototype**, not as a finished production AI application.
+
+The AI layer was started but the project was not developed far enough to deliver a complete, production-ready end-to-end AI workflow in the deployed application.
+
+This distinction is intentional so the repository accurately represents the current state of the work.
 
 ## Stack
 
-Next.js 16, React 19, TypeScript, Tailwind CSS 4, Prisma, PostgreSQL, Zod, and Google's `@google/genai` SDK. The AI layer is isolated in `lib/ai.ts` so another provider can be introduced without changing the UI or data model.
+- Next.js
+- React
+- TypeScript
+- Tailwind CSS
+- Prisma
+- PostgreSQL
+- Zod
+- Google Gemini SDK (`@google/genai`)
 
-## Local setup
+## Local Setup
 
-A PostgreSQL database is required for the current production-ready setup. Neon is a convenient hosted option, and Docker/Postgres works locally as well.
+A PostgreSQL database is required for the current project structure.
 
 ```bash
 git clone https://github.com/App-netizen-arch/studyflow-ai.git
@@ -30,7 +47,7 @@ npm install
 cp .env.example .env
 ```
 
-Set `DATABASE_URL` to your PostgreSQL connection string and add your Gemini API key, then run:
+Configure the environment variables required by the current codebase, then run:
 
 ```bash
 npx prisma generate
@@ -41,34 +58,23 @@ npm run dev
 
 Open `http://localhost:3000`.
 
-### Environment variables
+## Environment Variables
+
+The project is designed to keep provider credentials outside the repository.
 
 ```env
-DATABASE_URL="postgresql://USER:PASSWORD@HOST:5432/DATABASE?sslmode=require"
+DATABASE_URL="your_postgresql_connection_string"
 GEMINI_API_KEY="your_google_ai_studio_key"
-GEMINI_MODEL="gemini-2.5-flash"
+GEMINI_MODEL="your_supported_gemini_model"
 ```
 
-`OPENAI_API_KEY` and `ANTHROPIC_API_KEY` are reserved for future provider adapters. No provider secret is read by client components.
+**Never commit real secrets or API keys to Git.**
 
-## AI architecture
+## AI Integration
 
-The route `/api/ai/[operation]` validates the operation and note ownership, applies a lightweight per-IP request limit, then calls the server-side provider adapter. Gemini is asked for `application/json` plus a response schema, so the app stores typed structured data instead of parsing arbitrary prose.
+The repository contains groundwork for server-side Gemini integration. AI requests are intended to be handled through the server rather than exposing provider credentials in client components.
 
-## Database architecture
-
-The app uses Prisma with PostgreSQL. The initial schema lives in `prisma/migrations/20260818_init/migration.sql`, and the build process runs `prisma migrate deploy` before the Next.js build so a configured production database is brought up to date automatically.
-
-The production database connection is intentionally external to the repository. On Vercel, provision a PostgreSQL database through a marketplace provider such as Neon and bind its connection string to the project's `DATABASE_URL` environment variable.
-
-## Deployment
-
-1. Provision a PostgreSQL database for the project.
-2. Add `DATABASE_URL` and `GEMINI_API_KEY` to the Vercel **Production** environment.
-3. Redeploy `main`. The build runs Prisma migrations automatically.
-4. Verify `/api/notes` returns HTTP 200 from the deployed site.
-
-Keep secrets out of Git. The repository only contains `.env.example`.
+Because this project remains a prototype, AI functionality should not be assumed to be fully production-ready or equivalent to a deployed commercial AI service.
 
 ## Testing
 
@@ -78,24 +84,20 @@ npm run lint
 npm run build
 ```
 
-The included tests cover note validation and supported AI operations. The critical end-to-end path is: create note → generate result → persist result → refresh/reopen note → use result UI.
+The repository includes tests for core validation and supported application behavior.
 
-## Portfolio talking points
+## Why this project exists
 
-This project demonstrates:
+StudyFlow AI was built as an exploration of:
 
-- Full-stack Next.js App Router architecture
-- Server-side AI integration with structured output
-- API validation and consistent error contracts
-- Prisma relational schema and PostgreSQL persistence
-- UX state design for loading, failure, empty, and success states
-- Responsive/accessibility-conscious UI engineering
-- Basic abuse protection and secret handling
+- AI-assisted study workflows
+- full-stack application architecture
+- structured AI output
+- persistent data models
+- product UX for educational software
 
-## Known limitations
+The project may be extended in the future with real authentication, a complete production AI workflow, richer study modes, result versioning, and background processing.
 
-Authentication is intentionally kept lightweight in v1 through a demo workspace user so the core product remains easy to run. A production deployment should replace this with a real authenticated user/session layer.
+## License
 
-## Future improvements
-
-A natural next iteration would add real authentication, richer flashcard study modes, result versioning, and background generation jobs for very large notes.
+See the repository's license and dependency terms before redistributing the project or its third-party components.
